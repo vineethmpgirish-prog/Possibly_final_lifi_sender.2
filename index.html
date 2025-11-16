@@ -1,109 +1,490 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Li-Fi Screen Sender</title>
-<style>
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #111;
-        color: white;
-        text-align: center;
-        padding-top: 40px;
-    }
-
-    #screenFlash {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: black;
-        z-index: -1;
-        transition: background 0.05s linear;
-    }
-
-    input, button {
-        font-size: 18px;
-        padding: 10px;
-        width: 80%;
-        max-width: 350px;
-        margin-top: 10px;
-    }
-
-    #status {
-        margin-top: 20px;
-        font-size: 20px;
-        color: #0f0;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Li-Fi Transmitter - Phone Flashlight</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.transmitting {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 1s infinite;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.complete {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        .debug {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .debug.active {
+            display: block;
+        }
+        
+        .progress {
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .progress.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .flash-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.05s;
+        }
+        
+        .flash-indicator.on {
+            opacity: 0.95;
+        }
+    </style>
 </head>
 <body>
-
-<h1>💡 Li-Fi Screen Sender</h1>
-
-<input id="msgInput" type="text" placeholder="Type your message here..." />
-<br>
-<button onclick="startSending()">Send Message</button>
-
-<div id="status">Idle...</div>
-
-<div id="screenFlash"></div>
-
-<script>
-const bitTime = 200; // 200ms per bit
-
-function charToBinary(char) {
-    return char.charCodeAt(0).toString(2).padStart(8, "0");
-}
-
-function setFlash(on) {
-    document.getElementById("screenFlash").style.background = on ? "white" : "black";
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function sendBit(bit) {
-    setFlash(bit === "1");
-    await sleep(bitTime);
-}
-
-async function startSending() {
-    const msg = document.getElementById("msgInput").value;
-    const status = document.getElementById("status");
-
-    if (!msg) {
-        alert("Enter a message first!");
-        return;
-    }
-
-    status.innerText = "Sending...";
-
-    // START BIT = 1
-    await sendBit("1");
-    await sendBit("0"); // small gap
-
-    // SEND CHARACTERS
-    for (let i = 0; i < msg.length; i++) {
-        let bin = charToBinary(msg[i]);
-        console.log("Sending:", msg[i], bin);
-
-        for (let b of bin) {
-            await sendBit(b);
+    <div class="flash-indicator" id="flashIndicator"></div>
+    
+    <div class="container">
+        <h1>📡 Li-Fi Transmitter</h1>
+        <p class="subtitle">Send messages using your phone's flashlight</p>
+        
+        <div class="status ready" id="status">Ready to transmit</div>
+        
+        <div class="input-group">
+            <label for="message">Enter Message:</label>
+            <input type="text" id="message" placeholder="Type your message here..." maxlength="50">
+        </div>
+        
+        <button class="btn btn-primary" id="sendBtn" onclick="startTransmission()">
+            🔦 Send Message
+        </button>
+        
+        <button class="btn btn-secondary" id="testBtn" onclick="testFlashlight()">
+            💡 Test Flashlight
+        </button>
+        
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+        </div>
+        
+        <div class="debug" id="debug"></div>
+        
+        <div class="info-box">
+            <h3>📋 Instructions:</h3>
+            <ul>
+                <li>Point phone's back camera (flashlight) at LDR sensor</li>
+                <li>Keep distance 5-20cm for best results</li>
+                <li>Block ambient light with your hand</li>
+                <li>Type message and tap "Send Message"</li>
+                <li>Works best in a dark room</li>
+            </ul>
+        </div>
+        
+        <div class="info-box">
+            <h3>⚙️ Settings:</h3>
+            <ul>
+                <li>Bit Duration: 50ms</li>
+                <li>Protocol: START(5×ON) + DATA + STOP(5×OFF)</li>
+                <li>Encoding: 8-bit ASCII</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const BIT_DURATION = 50; // Must match Arduino receiver (50ms)
+        let videoStream = null;
+        let videoTrack = null;
+        let isTransmitting = false;
+        
+        const statusEl = document.getElementById('status');
+        const messageInput = document.getElementById('message');
+        const sendBtn = document.getElementById('sendBtn');
+        const testBtn = document.getElementById('testBtn');
+        const debugEl = document.getElementById('debug');
+        const progressEl = document.getElementById('progress');
+        const progressFill = document.getElementById('progressFill');
+        const flashIndicator = document.getElementById('flashIndicator');
+        
+        // Initialize flashlight on page load
+        window.addEventListener('load', initFlashlight);
+        
+        async function initFlashlight() {
+            try {
+                // Request camera access with torch
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        advanced: [{ torch: true }]
+                    }
+                });
+                
+                videoTrack = videoStream.getVideoTracks()[0];
+                
+                // Check if torch is supported
+                const capabilities = videoTrack.getCapabilities();
+                if (!capabilities.torch) {
+                    throw new Error('Flashlight not supported on this device');
+                }
+                
+                updateStatus('Ready to transmit', 'ready');
+                log('✓ Flashlight initialized successfully');
+                
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+                log('✗ Flashlight initialization failed: ' + error.message);
+                sendBtn.disabled = true;
+                testBtn.disabled = true;
+            }
         }
-    }
-
-    // STOP BYTE = 00000000
-    for (let i = 0; i < 8; i++) {
-        await sendBit("0");
-    }
-
-    status.innerText = "Done!";
-    setFlash(false);
-}
-</script>
-
+        
+        async function setFlashlight(on) {
+            if (!videoTrack) return;
+            
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ torch: on }]
+                });
+                
+                // Visual feedback
+                flashIndicator.classList.toggle('on', on);
+                
+            } catch (error) {
+                console.error('Flashlight error:', error);
+            }
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        async function testFlashlight() {
+            if (isTransmitting) return;
+            
+            updateStatus('Testing flashlight...', 'transmitting');
+            testBtn.disabled = true;
+            sendBtn.disabled = true;
+            
+            log('Testing flashlight - 3 blinks');
+            
+            for (let i = 0; i < 3; i++) {
+                await setFlashlight(true);
+                await sleep(300);
+                await setFlashlight(false);
+                await sleep(300);
+            }
+            
+            updateStatus('Test complete - Ready to transmit', 'ready');
+            testBtn.disabled = false;
+            sendBtn.disabled = false;
+        }
+        
+        async function startTransmission() {
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            if (isTransmitting) return;
+            
+            isTransmitting = true;
+            sendBtn.disabled = true;
+            testBtn.disabled = true;
+            messageInput.disabled = true;
+            
+            updateStatus('Transmitting: "' + message + '"', 'transmitting');
+            progressEl.classList.add('active');
+            debugEl.classList.add('active');
+            
+            log('='.repeat(50));
+            log('Starting transmission: "' + message + '"');
+            log('='.repeat(50));
+            
+            await sendMessage(message);
+            
+            updateStatus('Transmission complete!', 'complete');
+            log('Transmission complete!');
+            
+            await sleep(2000);
+            
+            isTransmitting = false;
+            sendBtn.disabled = false;
+            testBtn.disabled = false;
+            messageInput.disabled = false;
+            updateStatus('Ready to transmit', 'ready');
+            progressEl.classList.remove('active');
+            updateProgress(0);
+        }
+        
+        async function sendMessage(message) {
+            const totalBits = 5 + (message.length * 8) + 5; // START + DATA + STOP
+            let bitsSent = 0;
+            
+            // Send START sequence (5 HIGH bits)
+            log('>>> Sending START (11111)');
+            for (let i = 0; i < 5; i++) {
+                await setFlashlight(true);
+                await sleep(BIT_DURATION);
+                bitsSent++;
+                updateProgress((bitsSent / totalBits) * 100);
+            }
+            
+            // Send each character
+            for (let i = 0; i < message.length; i++) {
+                const char = message[i];
+                const ascii = char.charCodeAt(0);
+                
+                // Only send printable ASCII
+                if (ascii >= 32 && ascii <= 126) {
+                    await sendByte(char, ascii);
+                    bitsSent += 8;
+                    updateProgress((bitsSent / totalBits) * 100);
+                }
+            }
+            
+            // Send STOP sequence (5 LOW bits)
+            log('>>> Sending STOP (00000)');
+            for (let i = 0; i < 5; i++) {
+                await setFlashlight(false);
+                await sleep(BIT_DURATION);
+                bitsSent++;
+                updateProgress((bitsSent / totalBits) * 100);
+            }
+            
+            // Ensure flashlight is off
+            await setFlashlight(false);
+        }
+        
+        async function sendByte(char, ascii) {
+            const binary = ascii.toString(2).padStart(8, '0');
+            log(`Sending '${char}' (ASCII ${ascii} = 0b${binary}): ${binary}`);
+            
+            // Send 8 bits (MSB first)
+            for (let i = 0; i < 8; i++) {
+                const bit = binary[i] === '1';
+                await setFlashlight(bit);
+                await sleep(BIT_DURATION);
+            }
+        }
+        
+        function updateStatus(text, type) {
+            statusEl.textContent = text;
+            statusEl.className = 'status ' + type;
+        }
+        
+        function updateProgress(percent) {
+            progressFill.style.width = percent + '%';
+            progressFill.textContent = Math.round(percent) + '%';
+        }
+        
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            debugEl.innerHTML += `[${time}] ${message}<br>`;
+            debugEl.scrollTop = debugEl.scrollHeight;
+        }
+        
+        // Handle page visibility to turn off flashlight
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && videoTrack) {
+                setFlashlight(false);
+            }
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
 </body>
 </html>
